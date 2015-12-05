@@ -1,1 +1,297 @@
-!function(){"use strict";var r="undefined"==typeof window?global:window;if("function"!=typeof r.require){var e={},n={},t={},i={}.hasOwnProperty,a="components/",s=function(r,e){var n=0;e&&(0===e.indexOf(a)&&(n=a.length),e.indexOf("/",n)>0&&(e=e.substring(n,e.indexOf("/",n))));var i=t[r+"/index.js"]||t[e+"/deps/"+r+"/index.js"];return i?a+i.substring(0,i.length-".js".length):r},o=/^\.\.?(\/|$)/,u=function(r,e){for(var n,t=[],i=(o.test(e)?r+"/"+e:e).split("/"),a=0,s=i.length;s>a;a++)n=i[a],".."===n?t.pop():"."!==n&&""!==n&&t.push(n);return t.join("/")},c=function(r){return r.split("/").slice(0,-1).join("/")},f=function(e){return function(n){var t=u(c(e),n);return r.require(t,e)}},l=function(r,e){var t={id:r,exports:{}};return n[r]=t,e(t.exports,f(r),t),t.exports},p=function(r,t){var a=u(r,".");if(null==t&&(t="/"),a=s(r,t),i.call(n,a))return n[a].exports;if(i.call(e,a))return l(a,e[a]);var o=u(a,"./index");if(i.call(n,o))return n[o].exports;if(i.call(e,o))return l(o,e[o]);throw new Error('Cannot find module "'+r+'" from '+'"'+t+'"')};p.alias=function(r,e){t[e]=r},p.register=p.define=function(r,n){if("object"==typeof r)for(var t in r)i.call(r,t)&&(e[t]=r[t]);else e[r]=n},p.list=function(){var r=[];for(var n in e)i.call(e,n)&&r.push(n);return r},p.brunch=!0,p._cache=n,r.require=p}}(),jade=function(r){function e(r){return null!=r}return Array.isArray||(Array.isArray=function(r){return"[object Array]"==Object.prototype.toString.call(r)}),Object.keys||(Object.keys=function(r){var e=[];for(var n in r)r.hasOwnProperty(n)&&e.push(n);return e}),r.merge=function(r,n){var t=r["class"],i=n["class"];(t||i)&&(t=t||[],i=i||[],Array.isArray(t)||(t=[t]),Array.isArray(i)||(i=[i]),t=t.filter(e),i=i.filter(e),r["class"]=t.concat(i).join(" "));for(var a in n)"class"!=a&&(r[a]=n[a]);return r},r.attrs=function(e,n){var t=[],i=e.terse;delete e.terse;var a=Object.keys(e),s=a.length;if(s){t.push("");for(var o=0;s>o;++o){var u=a[o],c=e[u];"boolean"==typeof c||null==c?c&&(i?t.push(u):t.push(u+'="'+u+'"')):0==u.indexOf("data")&&"string"!=typeof c?t.push(u+"='"+JSON.stringify(c)+"'"):"class"==u&&Array.isArray(c)?t.push(u+'="'+r.escape(c.join(" "))+'"'):n&&n[u]?t.push(u+'="'+r.escape(c)+'"'):t.push(u+'="'+c+'"')}}return t.join(" ")},r.escape=function(r){return String(r).replace(/&(?!(\w+|\#\d+);)/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")},r.rethrow=function(r,e,n){if(!e)throw r;var t=3,i=require("fs").readFileSync(e,"utf8"),a=i.split("\n"),s=Math.max(n-t,0),o=Math.min(a.length,n+t),t=a.slice(s,o).map(function(r,e){var t=e+s+1;return(t==n?"  > ":"    ")+t+"| "+r}).join("\n");throw r.path=e,r.message=(e||"Jade")+":"+n+"\n"+t+"\n\n"+r.message,r},r}({}),require.register("scripts/app",function(){});
+(function() {
+  'use strict';
+
+  var globals = typeof window === 'undefined' ? global : window;
+  if (typeof globals.require === 'function') return;
+
+  var modules = {};
+  var cache = {};
+  var aliases = {};
+  var has = ({}).hasOwnProperty;
+
+  var endsWith = function(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+  };
+
+  var _cmp = 'components/';
+  var unalias = function(alias, loaderPath) {
+    var start = 0;
+    if (loaderPath) {
+      if (loaderPath.indexOf(_cmp) === 0) {
+        start = _cmp.length;
+      }
+      if (loaderPath.indexOf('/', start) > 0) {
+        loaderPath = loaderPath.substring(start, loaderPath.indexOf('/', start));
+      }
+    }
+    var result = aliases[alias + '/index.js'] || aliases[loaderPath + '/deps/' + alias + '/index.js'];
+    if (result) {
+      return _cmp + result.substring(0, result.length - '.js'.length);
+    }
+    return alias;
+  };
+
+  var _reg = /^\.\.?(\/|$)/;
+  var expand = function(root, name) {
+    var results = [], part;
+    var parts = (_reg.test(name) ? root + '/' + name : name).split('/');
+    for (var i = 0, length = parts.length; i < length; i++) {
+      part = parts[i];
+      if (part === '..') {
+        results.pop();
+      } else if (part !== '.' && part !== '') {
+        results.push(part);
+      }
+    }
+    return results.join('/');
+  };
+
+  var dirname = function(path) {
+    return path.split('/').slice(0, -1).join('/');
+  };
+
+  var localRequire = function(path) {
+    return function expanded(name) {
+      var absolute = expand(dirname(path), name);
+      return globals.require(absolute, path);
+    };
+  };
+
+  var initModule = function(name, definition) {
+    var module = {id: name, exports: {}};
+    cache[name] = module;
+    definition(module.exports, localRequire(name), module);
+    return module.exports;
+  };
+
+  var require = function(name, loaderPath) {
+    var path = expand(name, '.');
+    if (loaderPath == null) loaderPath = '/';
+    path = unalias(name, loaderPath);
+
+    if (has.call(cache, path)) return cache[path].exports;
+    if (has.call(modules, path)) return initModule(path, modules[path]);
+
+    var dirIndex = expand(path, './index');
+    if (has.call(cache, dirIndex)) return cache[dirIndex].exports;
+    if (has.call(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
+
+    throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
+  };
+
+  require.alias = function(from, to) {
+    aliases[to] = from;
+  };
+
+  require.register = require.define = function(bundle, fn) {
+    if (typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has.call(bundle, key)) {
+          modules[key] = bundle[key];
+        }
+      }
+    } else {
+      modules[bundle] = fn;
+    }
+  };
+
+  require.list = function() {
+    var result = [];
+    for (var item in modules) {
+      if (has.call(modules, item)) {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  require.brunch = true;
+  require._cache = cache;
+  globals.require = require;
+})();
+
+jade = (function(exports){
+/*!
+ * Jade - runtime
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Lame Array.isArray() polyfill for now.
+ */
+
+if (!Array.isArray) {
+  Array.isArray = function(arr){
+    return '[object Array]' == Object.prototype.toString.call(arr);
+  };
+}
+
+/**
+ * Lame Object.keys() polyfill for now.
+ */
+
+if (!Object.keys) {
+  Object.keys = function(obj){
+    var arr = [];
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        arr.push(key);
+      }
+    }
+    return arr;
+  }
+}
+
+/**
+ * Merge two attribute objects giving precedence
+ * to values in object `b`. Classes are special-cased
+ * allowing for arrays and merging/joining appropriately
+ * resulting in a string.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @return {Object} a
+ * @api private
+ */
+
+exports.merge = function merge(a, b) {
+  var ac = a['class'];
+  var bc = b['class'];
+
+  if (ac || bc) {
+    ac = ac || [];
+    bc = bc || [];
+    if (!Array.isArray(ac)) ac = [ac];
+    if (!Array.isArray(bc)) bc = [bc];
+    ac = ac.filter(nulls);
+    bc = bc.filter(nulls);
+    a['class'] = ac.concat(bc).join(' ');
+  }
+
+  for (var key in b) {
+    if (key != 'class') {
+      a[key] = b[key];
+    }
+  }
+
+  return a;
+};
+
+/**
+ * Filter null `val`s.
+ *
+ * @param {Mixed} val
+ * @return {Mixed}
+ * @api private
+ */
+
+function nulls(val) {
+  return val != null;
+}
+
+/**
+ * Render the given attributes object.
+ *
+ * @param {Object} obj
+ * @param {Object} escaped
+ * @return {String}
+ * @api private
+ */
+
+exports.attrs = function attrs(obj, escaped){
+  var buf = []
+    , terse = obj.terse;
+
+  delete obj.terse;
+  var keys = Object.keys(obj)
+    , len = keys.length;
+
+  if (len) {
+    buf.push('');
+    for (var i = 0; i < len; ++i) {
+      var key = keys[i]
+        , val = obj[key];
+
+      if ('boolean' == typeof val || null == val) {
+        if (val) {
+          terse
+            ? buf.push(key)
+            : buf.push(key + '="' + key + '"');
+        }
+      } else if (0 == key.indexOf('data') && 'string' != typeof val) {
+        buf.push(key + "='" + JSON.stringify(val) + "'");
+      } else if ('class' == key && Array.isArray(val)) {
+        buf.push(key + '="' + exports.escape(val.join(' ')) + '"');
+      } else if (escaped && escaped[key]) {
+        buf.push(key + '="' + exports.escape(val) + '"');
+      } else {
+        buf.push(key + '="' + val + '"');
+      }
+    }
+  }
+
+  return buf.join(' ');
+};
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function escape(html){
+  return String(html)
+    .replace(/&(?!(\w+|\#\d+);)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * the jade in `filename` at the given `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+exports.rethrow = function rethrow(err, filename, lineno){
+  if (!filename) throw err;
+
+  var context = 3
+    , str = require('fs').readFileSync(filename, 'utf8')
+    , lines = str.split('\n')
+    , start = Math.max(lineno - context, 0)
+    , end = Math.min(lines.length, lineno + context);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? '  > ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'Jade') + ':' + lineno
+    + '\n' + context + '\n\n' + err.message;
+  throw err;
+};
+
+  return exports;
+
+})({});
+
+require.register("scripts/app", function(exports, require, module) {
+
+});
+
+;
+//# sourceMappingURL=app.js.map
